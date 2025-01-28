@@ -6,6 +6,7 @@ class Play extends Phaser.Scene {
     create() {
 
         //tile sprite! used for moving backgrounds as textures
+        this.starfieldbg = this.add.sprite(0, 0, 'starfieldbg').setOrigin(0, 0)
         this.starfield = this.add.tileSprite(0, 0, 640, 480, 'starfield').setOrigin(0, 0)
 
         //background
@@ -25,17 +26,28 @@ class Play extends Phaser.Scene {
         keyRESET = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.R)
         keyLEFT = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.LEFT)
         keyRIGHT = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.RIGHT)
+
+        //mouse movement
+        this.input.mouse.capture = true
     
         // adding THREE spaceships
-        this.ship01 = new Spaceship(this, game.config.width + borderUISize*6, borderUISize*4, 'spaceship', 0, 30).setOrigin(0, 0)
-        this.ship02 = new Spaceship(this, game.config.width + borderUISize*3, borderUISize*5 + borderPadding*2, 'spaceship', 0, 20).setOrigin(0,0)
-        this.ship03 = new Spaceship(this, game.config.width, borderUISize*6 + borderPadding*4, 'spaceship', 0, 10).setOrigin(0,0)
+        this.ship01 = new Spaceship(this, game.config.width + borderUISize*6, borderUISize*4, 'newspaceship', 0, 30, game.settings.spaceshipSpeed).setOrigin(0, 0)
+        this.ship02 = new Spaceship(this, game.config.width + borderUISize*4, borderUISize*6 + borderPadding*2, 'newspaceship', 0, 20, game.settings.spaceshipSpeed).setOrigin(0,0)
+        this.ship03 = new Spaceship(this, game.config.width, borderUISize*8 + borderPadding*4, 'newspaceship', 0, 10, game.settings.spaceshipSpeed).setOrigin(0,0)
+        this.ship04 = new Spaceship(this, game.config.width + borderUISize*5, borderUISize*6 + borderPadding*6, 'fastShip', 0, 40, game.settings.fastSpaceshipSpeed).setOrigin(0,0)
+        this.ship05 = new Spaceship(this, game.config.width + borderUISize*2, borderUISize*3 + borderPadding*6, 'fastShip', 0, 40, game.settings.fastSpaceshipSpeed).setOrigin(0,0)
 
+
+        this.ship01.play('spaceship2')
+        this.ship02.play('spaceship2')
+        this.ship03.play('spaceship2')
+        this.ship04.play('fastShip')
+        this.ship05.play('fastShip')
 
         this.p1Score = 0
 
         //displaying the score
-        let scoreCongif = {
+        let scoreConfig = {
             fontFamily: 'Courier',
             fontSize: '28px',
             backgroundColor: '#F3B141',
@@ -48,18 +60,63 @@ class Play extends Phaser.Scene {
             fixedWidth: 100
         }
 
-        this.scoreLeft = this.add.text(borderUISize + borderPadding, borderUISize + borderPadding*2, this.p1Score, scoreCongif)
+        
+        //timer code
+        this.timer = this.time.addEvent ({
+            delay: game.settings.gameTimer,
+            callback: this.endGame,
+            callbackScope: this
+        })
+
+        let timerConfig = {
+            fontFamily: 'Courier',
+            fontSize: '28px',
+            backgroundColor: '#F3B141',
+            color: '#843605',
+            align: 'right',
+            padding: {
+                top: 5,
+                bottom: 5,
+            },
+            fixedWidth: 100
+        }
+
+        this.speedIncreaseText = this.add.text(game.config.width / 2, game.config.height / 2, 'Speed Increase!', {
+            fontFamily: 'Courier',
+            fontSize: '28px',
+            backgroundColor: '#F3B141',
+            color: '#843605',
+            align: 'center',
+            padding: {
+                top: 5,
+                bottom: 5,
+            },
+            fixedWidth: 300
+        }).setOrigin(0.5).setVisible(false)
+
+        this.timerText = this.add.text(game.config.width - borderUISize - borderPadding - 120, borderUISize + borderPadding*2, Math.floor(this.timer.getRemainingSeconds()), timerConfig)
+
+        this.scoreLeft = this.add.text(borderUISize + borderPadding, borderUISize + borderPadding*2, this.p1Score, scoreConfig)
 
         //game over flag
         this.gameOver = false
 
         //timer 60 seconds
-        scoreCongif.fixedWidth = 0
-        this.clock = this.time.delayedCall(game.settings.gameTimer, () => {
-            this.add.text(game.config.width/2, game.config.height/2, 'GAME OVER', scoreCongif).setOrigin(0.5)
-            this.add.text(game.config.width/2, game.config.height/2 + 64, 'Press (R) to Restart or <- for Menu', scoreCongif).setOrigin(0.5)
-            this.gameOver = true
-        }, null, this)
+        scoreConfig.fixedWidth = 0
+
+        game.settings.spaceshipSpeed = game.settings.initialSpaceshipSpeed
+        //console.log('The speed initially is:', game.settings.spaceshipSpeed)
+
+        //timer
+        this.time.delayedCall(game.settings.increaseTime, () => {
+            game.settings.spaceshipSpeed = game.settings.increasedSpaceshipSpeed
+            //console.log('Spaceship spped is now:', game.settings.spaceshipSpeed)
+
+            this.speedIncreaseText.setVisible(true)
+            this.time.delayedCall(1000, () => {
+                this.speedIncreaseText.setVisible(false)
+            }, [], this)
+        }, [], this)
 
     }
 
@@ -80,24 +137,45 @@ class Play extends Phaser.Scene {
             this.ship01.update()
             this.ship02.update()
             this.ship03.update()
+            this.ship04.update()
+            this.ship05.update()
+
+            this.timerText.setText(Math.floor(this.timer.getRemainingSeconds()))
         }
 
         this.p1Rocket.update()
+
+        let collisionOccurred = false
 
         if(this.checkCollision(this.p1Rocket, this.ship03)) {
             console.log('KABOOM SHIP 03')
             this.p1Rocket.reset()
             this.shipExplode(this.ship03)
+            collisionOccurred = true
         }
         if(this.checkCollision(this.p1Rocket, this.ship02)) {
             console.log('KABOOM SHIP 02')
             this.p1Rocket.reset()
             this.shipExplode(this.ship02)
+            collisionOccurred = true
         }
         if(this.checkCollision(this.p1Rocket, this.ship01)) {
             console.log('KABOOM SHIP 01')
             this.p1Rocket.reset()
             this.shipExplode(this.ship01)
+            collisionOccurred = true
+        }
+        if(this.checkCollision(this.p1Rocket, this.ship04)) {
+            console.log('KABOOM SHIP 04')
+            this.p1Rocket.reset()
+            this.fastShipExplode(this.ship04)
+            collisionOccurred = true
+        }
+        if(this.checkCollision(this.p1Rocket, this.ship05)) {
+            console.log('KABOOM SHIP 05')
+            this.p1Rocket.reset()
+            this.fastShipExplode(this.ship05)
+            collisionOccurred = true
         }
 
 
@@ -117,6 +195,14 @@ class Play extends Phaser.Scene {
         
     }
 
+    checkMiss() {
+        if (this.p1Rocket.y <= (borderUISize * 3 + borderPadding)) {
+            this.timer.delay -= 5000
+            this.timerText.setText(Math.floor(this.timer.getRemainingSeconds()))
+            console.log('Rocket missed all targets')
+        }
+    }
+
     shipExplode(ship) {
         // temporarily hide ship
         ship.alpha = 0
@@ -132,7 +218,53 @@ class Play extends Phaser.Scene {
         this.p1Score += ship.points
         this.scoreLeft.text = this.p1Score
 
+        this.timer.delay += 5000
+
+        this.timerText.setText(Math.floor(this.timer.getRemainingSeconds()))
+
         this.sound.play('sfx-explosion')
+    }
+
+    fastShipExplode(ship) {
+        // temporarily hide ship
+        ship.alpha = 0
+        // create explosion sprite at ship's position
+        let boom = this.add.sprite(ship.x, ship.y, 'fastExplosion').setOrigin(0, 0);
+        boom.anims.play('fastExplosion')             // play explode animation
+        boom.on('animationcomplete', () => {   // callback after anim completes
+          ship.reset()                         // reset ship position
+          ship.alpha = 1                       // make ship visible again
+          boom.destroy()                       // remove explosion sprite
+        })     
+        
+        this.p1Score += ship.points
+        this.scoreLeft.text = this.p1Score
+
+        this.timer.delay += 5000
+
+        this.timerText.setText(Math.floor(this.timer.getRemainingSeconds()))
+
+        this.sound.play('sfx-explosion')
+    }
+
+
+    endGame() {
+        let scoreConfig = {
+            fontFamily: 'Courier',
+            fontSize: '28px',
+            backgroundColor: '#F3B141',
+            color: '#843605',
+            align: 'center',
+            padding: {
+                top: 5,
+                bottom: 5,
+            },
+            fixedWidth: 0
+        }
+        this.add.text(game.config.width / 2, game.config.height / 2, 'GAME OVER', scoreConfig).setOrigin(0.5)
+        this.add.text(game.config.width / 2, game.config.height / 2 + 64, 'Press (R) to Restart or <- for Menu', scoreConfig).setOrigin(0.5)
+        this.gameOver = true
+
     }
 }
 
