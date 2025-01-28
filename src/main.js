@@ -35,6 +35,8 @@ the approximate time it took to complete the project (in hours)
     - created a new checkMiss function to call if rocket reaches the top of the game screen
     - updated rocket.js to call checkMiss() before resetting the rocket (took me 2 hours to figure out why my reset and time was wrong it was very annoying)
 
+Mainly used Nathan's code, Phaser documentation, stackoverflow, and minor sections of Youtube.
+
 */
 
 
